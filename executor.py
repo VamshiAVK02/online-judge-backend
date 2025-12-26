@@ -1,6 +1,20 @@
 import subprocess
 import sys
 import os
+import platform
+
+# ----------------------------
+# Limits
+# ----------------------------
+TIME_LIMIT = 2  # seconds
+MEMORY_LIMIT = 256 * 1024 * 1024  # 256 MB
+
+IS_LINUX = platform.system() == "Linux"
+
+def limit_resources():
+    # Memory limiting only supported on Linux
+    import resource
+    resource.setrlimit(resource.RLIMIT_AS, (MEMORY_LIMIT, MEMORY_LIMIT))
 
 # ----------------------------
 # Step 1: Read C++ file path
@@ -12,7 +26,7 @@ if len(sys.argv) < 2:
 cpp_file = sys.argv[1]
 
 # ----------------------------
-# Step 2: Compile the code
+# Step 2: Compile
 # ----------------------------
 compile_process = subprocess.run(
     ["g++", cpp_file, "-o", "prog"],
@@ -33,7 +47,6 @@ print("Compilation successful.")
 # ----------------------------
 input_dir = "testcases"
 output_dir = "outputs"
-
 input_files = sorted(os.listdir(input_dir))
 
 # ----------------------------
@@ -43,7 +56,6 @@ verdict = "AC"
 
 for input_file in input_files:
     input_path = os.path.join(input_dir, input_file)
-
     expected_file = "expected" + input_file.replace("input", "")
     expected_path = os.path.join(output_dir, expected_file)
 
@@ -53,15 +65,18 @@ for input_file in input_files:
             stdin=open(input_path),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True
+            text=True,
+            timeout=TIME_LIMIT,
+            preexec_fn=limit_resources if IS_LINUX else None
         )
-    except Exception:
-        verdict = "RE"
-        print(f"Runtime Error on {input_file}")
+
+    except subprocess.TimeoutExpired:
+        verdict = "TLE"
+        print(f"Time Limit Exceeded on {input_file}")
         break
 
     # ----------------------------
-    # Runtime Error check
+    # Runtime Error (macOS/Linux)
     # ----------------------------
     if run_process.returncode != 0:
         verdict = "RE"
@@ -72,12 +87,11 @@ for input_file in input_files:
     # Output normalization
     # ----------------------------
     user_output = run_process.stdout.strip()
-
     with open(expected_path) as f:
         expected_output = f.read().strip()
 
     # ----------------------------
-    # Wrong Answer check
+    # Wrong Answer
     # ----------------------------
     if user_output != expected_output:
         verdict = "WA"
