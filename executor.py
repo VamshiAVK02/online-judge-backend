@@ -1,13 +1,19 @@
 import subprocess
 import sys
+import os
 
+# ----------------------------
+# Step 1: Read C++ file path
+# ----------------------------
 if len(sys.argv) < 2:
     print("Usage: python executor.py <path_to_cpp_file>")
     sys.exit(1)
 
 cpp_file = sys.argv[1]
 
-# Compile
+# ----------------------------
+# Step 2: Compile the code
+# ----------------------------
 compile_process = subprocess.run(
     ["g++", cpp_file, "-o", "prog"],
     stdout=subprocess.PIPE,
@@ -22,18 +28,47 @@ if compile_process.returncode != 0:
 
 print("Compilation successful.")
 
-# Run
-run_process = subprocess.run(
-    ["./prog"],
-    stdin=open("testcases/input.txt"),
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    text=True
-)
+# ----------------------------
+# Step 3: Load test cases
+# ----------------------------
+input_dir = "testcases"
+output_dir = "outputs"
 
-print("Program Output:")
-print(run_process.stdout)
+input_files = sorted(os.listdir(input_dir))
 
-if run_process.stderr:
-    print("Runtime Error Output:")
-    print(run_process.stderr)
+# ----------------------------
+# Step 4: Run test cases
+# ----------------------------
+verdict = "AC"
+
+for input_file in input_files:
+    input_path = os.path.join(input_dir, input_file)
+
+    expected_file = "expected" + input_file.replace("input", "")
+    expected_path = os.path.join(output_dir, expected_file)
+
+    run_process = subprocess.run(
+        ["./prog"],
+        stdin=open(input_path),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+
+    # Capture user output
+    user_output = run_process.stdout.strip()
+
+    # Read expected output
+    with open(expected_path) as f:
+        expected_output = f.read().strip()
+
+    # Compare outputs
+    if user_output != expected_output:
+        verdict = "WA"
+        print(f"Wrong Answer on {input_file}")
+        break
+
+# ----------------------------
+# Step 5: Print verdict
+# ----------------------------
+print("Final Verdict:", verdict)
