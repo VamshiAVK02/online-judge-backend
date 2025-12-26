@@ -47,22 +47,38 @@ for input_file in input_files:
     expected_file = "expected" + input_file.replace("input", "")
     expected_path = os.path.join(output_dir, expected_file)
 
-    run_process = subprocess.run(
-        ["./prog"],
-        stdin=open(input_path),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
+    try:
+        run_process = subprocess.run(
+            ["./prog"],
+            stdin=open(input_path),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+    except Exception:
+        verdict = "RE"
+        print(f"Runtime Error on {input_file}")
+        break
 
-    # Capture user output
+    # ----------------------------
+    # Runtime Error check
+    # ----------------------------
+    if run_process.returncode != 0:
+        verdict = "RE"
+        print(f"Runtime Error on {input_file}")
+        break
+
+    # ----------------------------
+    # Output normalization
+    # ----------------------------
     user_output = run_process.stdout.strip()
 
-    # Read expected output
     with open(expected_path) as f:
         expected_output = f.read().strip()
 
-    # Compare outputs
+    # ----------------------------
+    # Wrong Answer check
+    # ----------------------------
     if user_output != expected_output:
         verdict = "WA"
         print(f"Wrong Answer on {input_file}")
