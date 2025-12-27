@@ -8,6 +8,7 @@ import platform
 # ----------------------------
 TIME_LIMIT = 2  # seconds
 MEMORY_LIMIT = 256 * 1024 * 1024  # 256 MB
+MAX_OUTPUT_SIZE = 1_000_000  # 1 MB output cap
 
 IS_LINUX = platform.system() == "Linux"
 
@@ -70,13 +71,16 @@ for input_file in input_files:
             preexec_fn=limit_resources if IS_LINUX else None
         )
 
+    # ----------------------------
+    # Time Limit Exceeded
+    # ----------------------------
     except subprocess.TimeoutExpired:
         verdict = "TLE"
         print(f"Time Limit Exceeded on {input_file}")
         break
 
     # ----------------------------
-    # Runtime Error (macOS/Linux)
+    # Runtime Error (crash / signal)
     # ----------------------------
     if run_process.returncode != 0:
         verdict = "RE"
@@ -84,9 +88,20 @@ for input_file in input_files:
         break
 
     # ----------------------------
+    # Output Size Limit (Huge Output Spam)
+    # ----------------------------
+    raw_output = run_process.stdout
+
+    if len(raw_output) > MAX_OUTPUT_SIZE:
+        verdict = "RE"
+        print(f"Output Limit Exceeded on {input_file}")
+        break
+
+    # ----------------------------
     # Output normalization
     # ----------------------------
-    user_output = run_process.stdout.strip()
+    user_output = raw_output.strip()
+
     with open(expected_path) as f:
         expected_output = f.read().strip()
 
